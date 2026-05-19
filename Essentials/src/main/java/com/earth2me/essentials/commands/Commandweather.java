@@ -33,13 +33,18 @@ public class Commandweather extends EssentialsCommand {
         final World world = user.getWorld();
 
         if (args.length > 1) {
-            world.setStorm(isStorm);
-            world.setWeatherDuration(Integer.parseInt(args[1]) * 20);
-            user.sendTl(isStorm ? "weatherStormFor" : "weatherSunFor", world.getName(), args[1]);
+            final int duration = Integer.parseInt(args[1]);
+            ess.scheduleSyncDelayedTask(() -> {
+                world.setStorm(isStorm);
+                world.setWeatherDuration(duration * 20);
+                user.sendTl(isStorm ? "weatherStormFor" : "weatherSunFor", world.getName(), args[1]);
+            });
             return;
         }
-        world.setStorm(isStorm);
-        user.sendTl(isStorm ? "weatherStorm" : "weatherSun", world.getName());
+        ess.scheduleSyncDelayedTask(() -> {
+            world.setStorm(isStorm);
+            user.sendTl(isStorm ? "weatherStorm" : "weatherSun", world.getName());
+        });
     }
 
     @Override
@@ -55,13 +60,18 @@ public class Commandweather extends EssentialsCommand {
         }
 
         if (args.length > 2) {
-            world.setStorm(isStorm);
-            world.setWeatherDuration(Integer.parseInt(args[2]) * 20);
-            sender.sendTl(isStorm ? "weatherStormFor" : "weatherSunFor", world.getName(), args[2]);
+            final int duration = Integer.parseInt(args[2]);
+            ess.scheduleSyncDelayedTask(() -> {
+                world.setStorm(isStorm);
+                world.setWeatherDuration(duration * 20);
+                sender.sendTl(isStorm ? "weatherStormFor" : "weatherSunFor", world.getName(), args[2]);
+            });
             return;
         }
-        world.setStorm(isStorm);
-        sender.sendTl(isStorm ? "weatherStorm" : "weatherSun", world.getName());
+        ess.scheduleSyncDelayedTask(() -> {
+            world.setStorm(isStorm);
+            sender.sendTl(isStorm ? "weatherStorm" : "weatherSun", world.getName());
+        });
     }
 
     @Override

@@ -861,7 +861,7 @@ public class User extends UserData implements Comparable<User>, IMessageRecipien
     public void updateActivityOnChat(final boolean broadcast) {
         if (ess.getSettings().cancelAfkOnChat()) {
             //Chat happens async, make sure we have a sync context
-            ess.scheduleSyncDelayedTask(() -> updateActivity(broadcast, AfkStatusChangeEvent.Cause.CHAT));
+            ess.runTaskForEntity(base, () -> updateActivity(broadcast, AfkStatusChangeEvent.Cause.CHAT));
         }
     }
 
@@ -892,14 +892,16 @@ public class User extends UserData implements Comparable<User>, IMessageRecipien
                 }
             } else {
                 // If `afk-timeout-commands` in config.yml is populated, execute the command(s) instead of kicking the player.
-                for (final String command : ess.getSettings().getAfkTimeoutCommands()) {
-                    if (command == null || command.isEmpty()){
-                        continue;
+                ess.scheduleSyncDelayedTask(() -> {
+                    for (final String command : ess.getSettings().getAfkTimeoutCommands()) {
+                        if (command == null || command.isEmpty()) {
+                            continue;
+                        }
+                        // Replace placeholders in the command with actual values.
+                        final String cmd = command.replace("{USERNAME}", getName()).replace("{KICKTIME}", String.valueOf(kickTime));
+                        ess.getServer().dispatchCommand(ess.getServer().getConsoleSender(), cmd);
                     }
-                    // Replace placeholders in the command with actual values.
-                    final String cmd = command.replace("{USERNAME}", getName()).replace("{KICKTIME}", String.valueOf(kickTime));
-                    ess.getServer().dispatchCommand(ess.getServer().getConsoleSender(), cmd);
-                }
+                });
             }
         }
         final long autoafk = ess.getSettings().getAutoAfk();

@@ -1,12 +1,12 @@
 package com.earth2me.essentials.commands.essentials;
 
 import com.earth2me.essentials.CommandSource;
+import com.earth2me.essentials.IEssentials;
 import com.earth2me.essentials.commands.EssentialsTreeNode;
 import com.earth2me.essentials.utils.RegistryUtil;
 import com.google.common.collect.ImmutableMap;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Collection;
 import java.util.Map;
@@ -28,11 +28,11 @@ public class NyanCommand extends EssentialsTreeNode {
             currentTune.cancel();
         }
 
-        currentTune = new TuneRunnable(NYAN_TUNE, NOTE_HARP, ess::getOnlinePlayers);
-        currentTune.runTaskTimer(ess, 20, 2);
+        currentTune = new TuneRunnable(ess, NYAN_TUNE, NOTE_HARP, ess::getOnlinePlayers);
+        currentTune.start();
     }
 
-    private static class TuneRunnable extends BukkitRunnable {
+    private static class TuneRunnable implements Runnable {
         private static final Map<String, Float> noteMap = ImmutableMap.<String, Float>builder()
                 .put("1F#", 0.5f)
                 .put("1G", 0.53f)
@@ -60,15 +60,29 @@ public class NyanCommand extends EssentialsTreeNode {
                 .put("2F", 1.88f)
                 .build();
 
+        private final IEssentials ess;
         private final String[] tune;
         private final Sound sound;
         private final Supplier<Collection<Player>> players;
         private int i = 0;
+        private int taskId = -1;
 
-        TuneRunnable(final String tuneStr, final Sound sound, final Supplier<Collection<Player>> players) {
+        TuneRunnable(final IEssentials ess, final String tuneStr, final Sound sound, final Supplier<Collection<Player>> players) {
+            this.ess = ess;
             this.tune = tuneStr.split(",");
             this.sound = sound;
             this.players = players;
+        }
+
+        void start() {
+            taskId = ess.scheduleSyncRepeatingTask(this, 20, 2);
+        }
+
+        void cancel() {
+            if (taskId != -1) {
+                ess.cancelTask(taskId);
+                taskId = -1;
+            }
         }
 
         @Override
@@ -83,7 +97,7 @@ public class NyanCommand extends EssentialsTreeNode {
             }
 
             for (final Player onlinePlayer : players.get()) {
-                onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1, noteMap.get(note));
+                ess.runTaskForEntity(onlinePlayer, () -> onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1, noteMap.get(note)));
             }
         }
     }

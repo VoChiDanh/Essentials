@@ -4,6 +4,7 @@ import com.earth2me.essentials.api.IAsyncTeleport;
 import com.earth2me.essentials.commands.WarpNotFoundException;
 import com.earth2me.essentials.utils.DateUtil;
 import com.earth2me.essentials.utils.LocationUtil;
+import com.earth2me.essentials.utils.VersionUtil;
 import io.papermc.lib.PaperLib;
 import net.ess3.api.IEssentials;
 import net.ess3.api.IUser;
@@ -134,6 +135,12 @@ public class AsyncTeleport implements IAsyncTeleport {
 
     @Override
     public void nowUnsafe(Location loc, TeleportCause cause, CompletableFuture<Boolean> future) {
+        if (VersionUtil.isFoliaServer()) {
+            final CompletableFuture<Boolean> foliaFuture = teleportOwner.getBase().teleportAsync(loc, cause);
+            foliaFuture.thenAccept(future::complete);
+            foliaFuture.exceptionally(future::completeExceptionally);
+            return;
+        }
         final CompletableFuture<Boolean> paperFuture = PaperLib.teleportAsync(teleportOwner.getBase(), loc, cause);
         paperFuture.thenAccept(future::complete);
         paperFuture.exceptionally(future::completeExceptionally);
@@ -145,7 +152,7 @@ public class AsyncTeleport implements IAsyncTeleport {
             return;
         }
         final CompletableFuture<Object> taskLock = new CompletableFuture<>();
-        Bukkit.getScheduler().runTask(ess, () -> {
+        ess.runTaskForEntity(teleportOwner.getBase(), () -> {
             runnable.run();
             taskLock.complete(new Object());
         });
@@ -186,42 +193,47 @@ public class AsyncTeleport implements IAsyncTeleport {
             targetLoc.setZ(LocationUtil.getZInsideWorldBorder(targetLoc.getWorld(), targetLoc.getBlockZ()));
         }
         PaperLib.getChunkAtAsync(targetLoc.getWorld(), targetLoc.getBlockX() >> 4, targetLoc.getBlockZ() >> 4, true, true).thenAccept(chunk -> {
-            Location loc = targetLoc;
-            if (LocationUtil.isBlockUnsafeForUser(ess, teleportee, chunk.getWorld(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())) {
-                if (ess.getSettings().isTeleportSafetyEnabled()) {
-                    if (ess.getSettings().isForceDisableTeleportSafety()) {
-                        //The chunk we're teleporting to is 100% going to be loaded here, no need to teleport async.
-                        teleportee.getBase().teleport(loc, cause);
-                    } else {
-                        try {
-                            //There's a chance the safer location is outside the loaded chunk so still teleport async here.
-                            PaperLib.teleportAsync(teleportee.getBase(), LocationUtil.getSafeDestination(ess, teleportee, loc), cause);
-                        } catch (final Exception e) {
-                            future.completeExceptionally(e);
-                            return;
+            ess.runTaskAtLocation(targetLoc, () -> {
+                Location loc = targetLoc;
+                if (LocationUtil.isBlockUnsafeForUser(ess, teleportee, chunk.getWorld(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())) {
+                    if (ess.getSettings().isTeleportSafetyEnabled()) {
+                        if (ess.getSettings().isForceDisableTeleportSafety()) {
+                            completeTeleport(teleportee.getBase(), loc, cause, future);
+                        } else {
+                            try {
+                                //There's a chance the safer location is outside the loaded chunk so still teleport async here.
+                                completeTeleport(teleportee.getBase(), LocationUtil.getSafeDestination(ess, teleportee, loc), cause, future);
+                            } catch (final Exception e) {
+                                future.completeExceptionally(e);
+                                return;
+                            }
                         }
+                    } else {
+                        future.completeExceptionally(new TranslatableException("unsafeTeleportDestination", loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+                        return;
                     }
                 } else {
-                    future.completeExceptionally(new TranslatableException("unsafeTeleportDestination", loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
-                    return;
-                }
-            } else {
-                if (ess.getSettings().isForceDisableTeleportSafety()) {
-                    //The chunk we're teleporting to is 100% going to be loaded here, no need to teleport async.
-                    teleportee.getBase().teleport(loc, cause);
-                } else {
-                    if (ess.getSettings().isTeleportToCenterLocation()) {
-                        loc = LocationUtil.getRoundedDestination(loc);
+                    if (ess.getSettings().isForceDisableTeleportSafety()) {
+                        completeTeleport(teleportee.getBase(), loc, cause, future);
+                    } else {
+                        if (ess.getSettings().isTeleportToCenterLocation()) {
+                            loc = LocationUtil.getRoundedDestination(loc);
+                        }
+                        //There's a *small* chance the rounded destination produces a location outside the loaded chunk so still teleport async here.
+                        completeTeleport(teleportee.getBase(), loc, cause, future);
                     }
-                    //There's a *small* chance the rounded destination produces a location outside the loaded chunk so still teleport async here.
-                    PaperLib.teleportAsync(teleportee.getBase(), loc, cause);
                 }
-            }
-            future.complete(true);
+            });
         }).exceptionally(th -> {
             future.completeExceptionally(th);
             return null;
         });
+    }
+
+    private void completeTeleport(final Player player, final Location loc, final TeleportCause cause, final CompletableFuture<Boolean> future) {
+        final CompletableFuture<Boolean> teleportFuture = PaperLib.teleportAsync(player, loc, cause);
+        teleportFuture.thenAccept(future::complete);
+        teleportFuture.exceptionally(future::completeExceptionally);
     }
 
     @Override

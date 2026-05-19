@@ -3,9 +3,11 @@ package com.earth2me.essentials.commands;
 import com.earth2me.essentials.CommandSource;
 import com.earth2me.essentials.Mob;
 import com.earth2me.essentials.User;
+import com.earth2me.essentials.utils.VersionUtil;
 import com.google.common.collect.Lists;
 import net.ess3.api.TranslatableException;
 import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.World;
@@ -36,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 // This could be rewritten in a simpler form if we made a mapping of all Entity names to their types (which would also provide possible mod support)
 
@@ -106,10 +109,11 @@ public class Commandremove extends EssentialsCommand {
     }
 
     private void removeHandler(final CommandSource sender, final List<String> types, final List<String> customTypes, final World world, int radius) {
-        int removed = 0;
         if (radius > 0) {
             radius *= radius;
         }
+        final int radiusSquared = radius;
+        final Location senderLocation = radiusSquared > 0 && sender.isPlayer() ? sender.getPlayer().getLocation() : null;
 
         final ArrayList<ToRemove> removeTypes = new ArrayList<>();
         final ArrayList<Mob> customRemoveTypes = new ArrayList<>();
@@ -133,10 +137,16 @@ public class Commandremove extends EssentialsCommand {
             sender.sendTl("invalidMob");
         }
 
+        if (VersionUtil.isFoliaServer()) {
+            removeFolia(sender, removeTypes, customRemoveTypes, world, radiusSquared, senderLocation);
+            return;
+        }
+
+        int removed = 0;
         for (final Chunk chunk : world.getLoadedChunks()) {
             for (final Entity e : chunk.getEntities()) {
-                if (radius > 0) {
-                    if (sender.getPlayer().getLocation().distanceSquared(e.getLocation()) > radius) {
+                if (radiusSquared > 0) {
+                    if (senderLocation.distanceSquared(e.getLocation()) > radiusSquared) {
                         continue;
                     }
                 }
@@ -144,123 +154,144 @@ public class Commandremove extends EssentialsCommand {
                     continue;
                 }
 
-                for (final ToRemove toRemove : removeTypes) {
-
-                    // We should skip any animals tamed by players unless we are specifially targetting them.
-                    if (e instanceof Tameable && ((Tameable) e).isTamed() && (((Tameable) e).getOwner() instanceof Player || ((Tameable) e).getOwner() instanceof OfflinePlayer) && !removeTypes.contains(ToRemove.TAMED)) {
-                        continue;
-                    }
-
-                    // We should skip any NAMED animals unless we are specifially targetting them.
-                    if (e instanceof LivingEntity && e.getCustomName() != null && !removeTypes.contains(ToRemove.NAMED)) {
-                        continue;
-                    }
-
-                    switch (toRemove) {
-                        case TAMED:
-                            if (e instanceof Tameable && ((Tameable) e).isTamed()) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case NAMED:
-                            if (e instanceof LivingEntity && e.getCustomName() != null) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case DROPS:
-                            if (e instanceof Item) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case ARROWS:
-                            if (e instanceof Projectile) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case BOATS:
-                            if (e instanceof Boat) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case MINECARTS:
-                            if (e instanceof Minecart) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case XP:
-                            if (e instanceof ExperienceOrb) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case PAINTINGS:
-                            if (e instanceof Painting) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case ITEMFRAMES:
-                            if (e instanceof ItemFrame) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case ENDERCRYSTALS:
-                            if (e instanceof EnderCrystal) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case AMBIENT:
-                            if (e instanceof Flying) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case HOSTILE:
-                        case MONSTERS:
-                            if (e instanceof Monster || e instanceof ComplexLivingEntity || e instanceof Flying || e instanceof Slime) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case PASSIVE:
-                        case ANIMALS:
-                            if (e instanceof Animals || e instanceof NPC || e instanceof Snowman || e instanceof WaterMob || e instanceof Ambient) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case MOBS:
-                            if (e instanceof Animals || e instanceof NPC || e instanceof Snowman || e instanceof WaterMob || e instanceof Monster || e instanceof ComplexLivingEntity || e instanceof Flying || e instanceof Slime || e instanceof Ambient) {
-                                e.remove();
-                                removed++;
-                            }
-                            break;
-                        case ENTITIES:
-                        case ALL:
-                            e.remove();
-                            removed++;
-                            break;
-                        case CUSTOM:
-                            for (final Mob type : customRemoveTypes) {
-                                if (e.getType() == type.getType()) {
-                                    e.remove();
-                                    removed++;
-                                }
-                            }
-                            break;
-                    }
+                if (shouldRemove(e, removeTypes, customRemoveTypes)) {
+                    e.remove();
+                    removed++;
                 }
             }
         }
         sender.sendTl("removed", removed);
+    }
+
+    private void removeFolia(final CommandSource sender, final ArrayList<ToRemove> removeTypes, final ArrayList<Mob> customRemoveTypes, final World world, final int radiusSquared, final Location senderLocation) {
+        final Chunk[] chunks = world.getLoadedChunks();
+        if (chunks.length == 0) {
+            sender.sendTl("removed", 0);
+            return;
+        }
+
+        final AtomicInteger removed = new AtomicInteger();
+        final AtomicInteger remaining = new AtomicInteger(chunks.length);
+
+        for (final Chunk chunk : chunks) {
+            ess.runTaskAtChunk(world, chunk.getX(), chunk.getZ(), () -> {
+                for (final Entity entity : chunk.getEntities()) {
+                    if (radiusSquared > 0 && senderLocation.distanceSquared(entity.getLocation()) > radiusSquared) {
+                        continue;
+                    }
+                    if (entity instanceof HumanEntity) {
+                        continue;
+                    }
+                    if (shouldRemove(entity, removeTypes, customRemoveTypes)) {
+                        entity.remove();
+                        removed.incrementAndGet();
+                    }
+                }
+                if (remaining.decrementAndGet() == 0) {
+                    ess.scheduleSyncDelayedTask(() -> sender.sendTl("removed", removed.get()));
+                }
+            });
+        }
+    }
+
+    private boolean shouldRemove(final Entity entity, final ArrayList<ToRemove> removeTypes, final ArrayList<Mob> customRemoveTypes) {
+        // We should skip any animals tamed by players unless we are specifically targeting them.
+        if (entity instanceof Tameable && ((Tameable) entity).isTamed() && (((Tameable) entity).getOwner() instanceof Player || ((Tameable) entity).getOwner() instanceof OfflinePlayer) && !removeTypes.contains(ToRemove.TAMED)) {
+            return false;
+        }
+
+        // We should skip any named animals unless we are specifically targeting them.
+        if (entity instanceof LivingEntity && entity.getCustomName() != null && !removeTypes.contains(ToRemove.NAMED)) {
+            return false;
+        }
+
+        for (final ToRemove toRemove : removeTypes) {
+            switch (toRemove) {
+                case TAMED:
+                    if (entity instanceof Tameable && ((Tameable) entity).isTamed()) {
+                        return true;
+                    }
+                    break;
+                case NAMED:
+                    if (entity instanceof LivingEntity && entity.getCustomName() != null) {
+                        return true;
+                    }
+                    break;
+                case DROPS:
+                    if (entity instanceof Item) {
+                        return true;
+                    }
+                    break;
+                case ARROWS:
+                    if (entity instanceof Projectile) {
+                        return true;
+                    }
+                    break;
+                case BOATS:
+                    if (entity instanceof Boat) {
+                        return true;
+                    }
+                    break;
+                case MINECARTS:
+                    if (entity instanceof Minecart) {
+                        return true;
+                    }
+                    break;
+                case XP:
+                    if (entity instanceof ExperienceOrb) {
+                        return true;
+                    }
+                    break;
+                case PAINTINGS:
+                    if (entity instanceof Painting) {
+                        return true;
+                    }
+                    break;
+                case ITEMFRAMES:
+                    if (entity instanceof ItemFrame) {
+                        return true;
+                    }
+                    break;
+                case ENDERCRYSTALS:
+                    if (entity instanceof EnderCrystal) {
+                        return true;
+                    }
+                    break;
+                case AMBIENT:
+                    if (entity instanceof Flying) {
+                        return true;
+                    }
+                    break;
+                case HOSTILE:
+                case MONSTERS:
+                    if (entity instanceof Monster || entity instanceof ComplexLivingEntity || entity instanceof Flying || entity instanceof Slime) {
+                        return true;
+                    }
+                    break;
+                case PASSIVE:
+                case ANIMALS:
+                    if (entity instanceof Animals || entity instanceof NPC || entity instanceof Snowman || entity instanceof WaterMob || entity instanceof Ambient) {
+                        return true;
+                    }
+                    break;
+                case MOBS:
+                    if (entity instanceof Animals || entity instanceof NPC || entity instanceof Snowman || entity instanceof WaterMob || entity instanceof Monster || entity instanceof ComplexLivingEntity || entity instanceof Flying || entity instanceof Slime || entity instanceof Ambient) {
+                        return true;
+                    }
+                    break;
+                case ENTITIES:
+                case ALL:
+                    return true;
+                case CUSTOM:
+                    for (final Mob type : customRemoveTypes) {
+                        if (entity.getType() == type.getType()) {
+                            return true;
+                        }
+                    }
+                    break;
+            }
+        }
+        return false;
     }
 
     @Override

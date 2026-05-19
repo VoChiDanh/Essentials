@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.bukkit.Location;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
+import org.bukkit.scheduler.BukkitTask;
 
 import net.ess3.api.IEssentials;
 import net.ess3.api.IUser;
@@ -31,7 +32,7 @@ public class AsyncTimedTeleport implements Runnable {
     private final boolean timer_canMove;
     private final Trade timer_chargeFor;
     private final TeleportCause timer_cause;
-    private int timer_task;
+    private BukkitTask timer_task;
     private double timer_health;
 
     AsyncTimedTeleport(final IUser user, final IEssentials ess, final AsyncTeleport teleport, final long delay, final IUser teleportUser, final ITarget target, final Trade chargeFor, final TeleportCause cause, final boolean respawn) {
@@ -55,7 +56,7 @@ public class AsyncTimedTeleport implements Runnable {
         this.timer_respawn = respawn;
         this.timer_canMove = user.isAuthorized("essentials.teleport.timer.move");
 
-        timer_task = ess.runTaskTimerAsynchronously(this, 20, 20).getTaskId();
+        timer_task = ess.runTaskTimerAsynchronously(this, 20, 20);
 
         if (future != null) {
             this.parentFuture = future;
@@ -142,16 +143,16 @@ public class AsyncTimedTeleport implements Runnable {
             }
         }
 
-        ess.scheduleSyncDelayedTask(new DelayedTeleportTask());
+        ess.runTaskForEntity(teleportOwner.getBase(), new DelayedTeleportTask());
     }
 
     //If we need to cancelTimer a pending teleportPlayer call this method
     void cancelTimer(final boolean notifyUser) {
-        if (timer_task == -1) {
+        if (timer_task == null) {
             return;
         }
         try {
-            ess.getServer().getScheduler().cancelTask(timer_task);
+            timer_task.cancel();
 
             final IUser teleportUser = ess.getUser(this.timer_teleportee);
             if (teleportUser != null && teleportUser.getBase() != null) {
@@ -167,7 +168,7 @@ public class AsyncTimedTeleport implements Runnable {
                 }
             }
         } finally {
-            timer_task = -1;
+            timer_task = null;
         }
     }
 }

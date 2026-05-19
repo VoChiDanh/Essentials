@@ -68,13 +68,16 @@ import net.ess3.provider.InventoryViewProvider;
 import net.ess3.provider.KnownCommandsProvider;
 import net.ess3.provider.PlayerLocaleProvider;
 import net.ess3.provider.ProviderListener;
+import net.ess3.provider.SchedulingProvider;
 import net.ess3.provider.ServerStateProvider;
 import net.ess3.provider.providers.BaseBannerDataProvider;
 import net.ess3.provider.providers.BaseInventoryViewProvider;
 import net.ess3.provider.providers.BlockMetaSpawnerItemProvider;
 import net.ess3.provider.providers.BukkitMaterialTagProvider;
+import net.ess3.provider.providers.BukkitSchedulingProvider;
 import net.ess3.provider.providers.BukkitSpawnerBlockProvider;
 import net.ess3.provider.providers.BukkitTileEntityProvider;
+import net.ess3.provider.providers.FoliaSchedulingProvider;
 import net.ess3.provider.providers.FixedHeightWorldInfoProvider;
 import net.ess3.provider.providers.FlatSpawnEggProvider;
 import net.ess3.provider.providers.LegacyBannerDataProvider;
@@ -106,6 +109,7 @@ import net.ess3.provider.providers.PrehistoricPotionMetaProvider;
 import net.essentialsx.api.v2.services.BalanceTop;
 import net.essentialsx.api.v2.services.mail.MailService;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -115,6 +119,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.PluginIdentifiableCommand;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
@@ -182,6 +187,7 @@ public class Essentials extends JavaPlugin implements net.ess3.api.IEssentials {
     private transient ProviderListener recipeBookEventProvider;
     private transient Kits kits;
     private transient RandomTeleport randomTeleport;
+    private transient SchedulingProvider schedulingProvider;
     private transient UpdateChecker updateChecker;
     private transient AdventureFacet adventureFacet;
 
@@ -1234,32 +1240,59 @@ public class Essentials extends JavaPlugin implements net.ess3.api.IEssentials {
 
     @Override
     public BukkitTask runTaskAsynchronously(final Runnable run) {
-        return this.getScheduler().runTaskAsynchronously(this, run);
+        return getSchedulingProvider().runTaskAsynchronously(run);
     }
 
     @Override
     public BukkitTask runTaskLaterAsynchronously(final Runnable run, final long delay) {
-        return this.getScheduler().runTaskLaterAsynchronously(this, run, delay);
+        return getSchedulingProvider().runTaskLaterAsynchronously(run, delay);
     }
 
     @Override
     public BukkitTask runTaskTimerAsynchronously(final Runnable run, final long delay, final long period) {
-        return this.getScheduler().runTaskTimerAsynchronously(this, run, delay, period);
+        return getSchedulingProvider().runTaskTimerAsynchronously(run, delay, period);
+    }
+
+    @Override
+    public void runTaskForEntity(final Entity entity, final Runnable run) {
+        getSchedulingProvider().runTaskForEntity(entity, run);
+    }
+
+    @Override
+    public void runTaskAtLocation(final Location location, final Runnable run) {
+        getSchedulingProvider().runTaskAtLocation(location, run);
+    }
+
+    @Override
+    public void runTaskAtChunk(final World world, final int chunkX, final int chunkZ, final Runnable run) {
+        getSchedulingProvider().runTaskAtChunk(world, chunkX, chunkZ, run);
     }
 
     @Override
     public int scheduleSyncDelayedTask(final Runnable run) {
-        return this.getScheduler().scheduleSyncDelayedTask(this, run);
+        return getSchedulingProvider().scheduleSyncDelayedTask(run);
     }
 
     @Override
     public int scheduleSyncDelayedTask(final Runnable run, final long delay) {
-        return this.getScheduler().scheduleSyncDelayedTask(this, run, delay);
+        return getSchedulingProvider().scheduleSyncDelayedTask(run, delay);
     }
 
     @Override
     public int scheduleSyncRepeatingTask(final Runnable run, final long delay, final long period) {
-        return this.getScheduler().scheduleSyncRepeatingTask(this, run, delay, period);
+        return getSchedulingProvider().scheduleSyncRepeatingTask(run, delay, period);
+    }
+
+    @Override
+    public void cancelTask(final int taskId) {
+        getSchedulingProvider().cancelTask(taskId);
+    }
+
+    private SchedulingProvider getSchedulingProvider() {
+        if (schedulingProvider == null) {
+            schedulingProvider = VersionUtil.isFoliaServer() ? new FoliaSchedulingProvider(this) : new BukkitSchedulingProvider(this);
+        }
+        return schedulingProvider;
     }
 
     @Override

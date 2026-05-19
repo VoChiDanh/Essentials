@@ -17,6 +17,8 @@ import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -104,11 +106,19 @@ public interface IEssentials extends Plugin {
 
     BukkitTask runTaskTimerAsynchronously(Runnable run, long delay, long period);
 
+    void runTaskForEntity(Entity entity, Runnable run);
+
+    void runTaskAtLocation(Location location, Runnable run);
+
+    void runTaskAtChunk(World world, int chunkX, int chunkZ, Runnable run);
+
     int scheduleSyncDelayedTask(Runnable run);
 
     int scheduleSyncDelayedTask(Runnable run, long delay);
 
     int scheduleSyncRepeatingTask(Runnable run, long delay, long period);
+
+    void cancelTask(int taskId);
 
     PermissionsHandler getPermissionsHandler();
 

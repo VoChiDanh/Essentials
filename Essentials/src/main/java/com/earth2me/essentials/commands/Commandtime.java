@@ -84,31 +84,34 @@ public class Commandtime extends EssentialsCommand {
         }
 
         final StringJoiner joiner = new StringJoiner(", ");
-        for (final World world : worlds) {
-            // Capture intended visible time for players with relative ptime before world time changes
-            final Map<Player, Long> ptimePlayers = new HashMap<>();
-            for (final Player player : world.getPlayers()) {
-                if (player.getPlayerTimeOffset() != 0 && player.isPlayerTimeRelative()) {
-                    ptimePlayers.put(player, player.getPlayerTime());
+        final boolean addTime = add;
+        ess.scheduleSyncDelayedTask(() -> {
+            for (final World world : worlds) {
+                // Capture intended visible time for players with relative ptime before world time changes
+                final Map<Player, Long> ptimePlayers = new HashMap<>();
+                for (final Player player : world.getPlayers()) {
+                    if (player.getPlayerTimeOffset() != 0 && player.isPlayerTimeRelative()) {
+                        ptimePlayers.put(player, player.getPlayerTime());
+                    }
                 }
+
+                long time = world.getTime();
+                if (!addTime) {
+                    time -= time % 24000;
+                }
+                world.setTime(time + (addTime ? 0 : 24000) + timeTick);
+
+                // Re-apply ptime offsets so players maintain their intended visible time
+                final long newWorldTime = world.getTime();
+                for (final Map.Entry<Player, Long> entry : ptimePlayers.entrySet()) {
+                    entry.getKey().setPlayerTime(entry.getValue() - newWorldTime, true);
+                }
+
+                joiner.add(world.getName());
             }
 
-            long time = world.getTime();
-            if (!add) {
-                time -= time % 24000;
-            }
-            world.setTime(time + (add ? 0 : 24000) + timeTick);
-
-            // Re-apply ptime offsets so players maintain their intended visible time
-            final long newWorldTime = world.getTime();
-            for (final Map.Entry<Player, Long> entry : ptimePlayers.entrySet()) {
-                entry.getKey().setPlayerTime(entry.getValue() - newWorldTime, true);
-            }
-
-            joiner.add(world.getName());
-        }
-
-        sender.sendTl(add ? "timeWorldAdd" : "timeWorldSet", DescParseTickFormat.formatTicks(timeTick), joiner.toString());
+            sender.sendTl(addTime ? "timeWorldAdd" : "timeWorldSet", DescParseTickFormat.formatTicks(timeTick), joiner.toString());
+        });
     }
 
     private void getWorldsTime(final CommandSource sender, final Collection<World> worlds) {

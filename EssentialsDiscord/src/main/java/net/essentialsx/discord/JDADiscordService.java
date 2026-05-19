@@ -290,9 +290,15 @@ public class JDADiscordService implements DiscordService, IEssentialsModule {
         }
         final DiscordMessageEvent event = new DiscordMessageEvent(type, FormatUtil.stripFormat(message), allowGroupMentions);
         if (Bukkit.getServer().isPrimaryThread()) {
-            Bukkit.getPluginManager().callEvent(event);
+            if (!plugin.isDisabled()) {
+                Bukkit.getPluginManager().callEvent(event);
+            }
         } else {
-            Bukkit.getScheduler().runTask(plugin, () -> Bukkit.getPluginManager().callEvent(event));
+            plugin.getEss().scheduleSyncDelayedTask(() -> {
+                if (!plugin.isDisabled()) {
+                    Bukkit.getPluginManager().callEvent(event);
+                }
+            });
         }
     }
 

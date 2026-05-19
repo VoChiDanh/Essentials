@@ -18,7 +18,7 @@ public class Commandlightning extends EssentialsLoopCommand {
     public void run(final Server server, final CommandSource sender, final String commandLabel, final String[] args) throws Exception {
         if (args.length == 0 || !sender.isAuthorized("essentials.lightning.others")) {
             if (sender.isPlayer()) {
-                sender.getPlayer().getWorld().strikeLightning(sender.getUser().getTargetBlock(600).getLocation());
+                ess.runTaskForEntity(sender.getPlayer(), () -> sender.getPlayer().getWorld().strikeLightning(sender.getUser().getTargetBlock(600).getLocation()));
                 return;
             }
             throw new NotEnoughArgumentsException();
@@ -33,15 +33,17 @@ public class Commandlightning extends EssentialsLoopCommand {
         }
         final int finalPower = power;
         loopOnlinePlayersConsumer(server, sender, false, true, args[0], player -> {
-            sender.sendTl("lightningUse", player.getDisplayName());
-            final LightningStrike strike = player.getBase().getWorld().strikeLightningEffect(player.getBase().getLocation());
+            ess.runTaskForEntity(player.getBase(), () -> {
+                sender.sendTl("lightningUse", player.getDisplayName());
+                final LightningStrike strike = player.getBase().getWorld().strikeLightningEffect(player.getBase().getLocation());
 
-            if (!player.isGodModeEnabled()) {
-                player.getBase().damage(finalPower, strike);
-            }
-            if (ess.getSettings().warnOnSmite()) {
-                player.sendTl("lightningSmited");
-            }
+                if (!player.isGodModeEnabled()) {
+                    player.getBase().damage(finalPower, strike);
+                }
+                if (ess.getSettings().warnOnSmite()) {
+                    player.sendTl("lightningSmited");
+                }
+            });
         });
         loopOnlinePlayers(server, sender, true, true, args[0], null);
     }

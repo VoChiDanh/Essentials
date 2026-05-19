@@ -3,6 +3,7 @@ package com.earth2me.essentials.commands;
 import com.earth2me.essentials.CommandSource;
 import com.earth2me.essentials.utils.DateUtil;
 import com.earth2me.essentials.utils.NumberUtil;
+import com.earth2me.essentials.utils.VersionUtil;
 import net.ess3.provider.TileEntityProvider;
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
@@ -11,6 +12,7 @@ import org.bukkit.World;
 
 import java.lang.management.ManagementFactory;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 public class Commandgc extends EssentialsCommand {
@@ -49,6 +51,11 @@ public class Commandgc extends EssentialsCommand {
                     break;
             }
 
+            if (VersionUtil.isFoliaServer()) {
+                sendFoliaWorldStats(sender, tileEntityProvider, w, worldType);
+                continue;
+            }
+
             int tileEntities = 0;
 
             try {
@@ -60,6 +67,33 @@ public class Commandgc extends EssentialsCommand {
             }
 
             sender.sendTl("gcWorld", worldType, w.getName(), w.getLoadedChunks().length, w.getEntities().size(), tileEntities);
+        }
+    }
+
+    private void sendFoliaWorldStats(final CommandSource sender, final TileEntityProvider tileEntityProvider, final World world, final String worldType) {
+        final Chunk[] chunks = world.getLoadedChunks();
+        if (chunks.length == 0) {
+            sender.sendTl("gcWorld", worldType, world.getName(), 0, 0, 0);
+            return;
+        }
+
+        final AtomicInteger remaining = new AtomicInteger(chunks.length);
+        final AtomicInteger entities = new AtomicInteger();
+        final AtomicInteger tileEntities = new AtomicInteger();
+
+        for (final Chunk chunk : chunks) {
+            ess.runTaskAtChunk(world, chunk.getX(), chunk.getZ(), () -> {
+                try {
+                    entities.addAndGet(chunk.getEntities().length);
+                    tileEntities.addAndGet(tileEntityProvider.getTileEntities(chunk).length);
+                } catch (final java.lang.ClassCastException ex) {
+                    ess.getLogger().log(Level.SEVERE, "Corrupted chunk data on world " + world, ex);
+                } finally {
+                    if (remaining.decrementAndGet() == 0) {
+                        ess.scheduleSyncDelayedTask(() -> sender.sendTl("gcWorld", worldType, world.getName(), chunks.length, entities.get(), tileEntities.get()));
+                    }
+                }
+            });
         }
     }
 }

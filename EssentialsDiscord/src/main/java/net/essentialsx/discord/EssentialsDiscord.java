@@ -25,6 +25,7 @@ public class EssentialsDiscord extends JavaPlugin implements IEssentialsModule {
     private DiscordSettings settings;
     private boolean isPAPI = false;
     private boolean isEssentialsChat = false;
+    private boolean disabled = true;
 
     @Override
     public void onEnable() {
@@ -60,6 +61,7 @@ public class EssentialsDiscord extends JavaPlugin implements IEssentialsModule {
             jda = new JDADiscordService(this);
             try {
                 jda.startup();
+                disabled = false;
                 ess.scheduleSyncDelayedTask(() -> ((InteractionControllerImpl) jda.getInteractionController()).processBatchRegistration());
             } catch (Exception e) {
                 getLogger().log(Level.SEVERE, ess.getAdventureFacet().miniToLegacy(tlLiteral("discordErrorLogin", e.getMessage())));
@@ -94,6 +96,10 @@ public class EssentialsDiscord extends JavaPlugin implements IEssentialsModule {
         return jda != null && jda.isInvalidStartup();
     }
 
+    public boolean isDisabled() {
+        return disabled;
+    }
+
     public IEssentials getEss() {
         return ess;
     }
@@ -112,6 +118,7 @@ public class EssentialsDiscord extends JavaPlugin implements IEssentialsModule {
 
     @Override
     public void onDisable() {
+        disabled = true;
         if (jda != null && !jda.isInvalidStartup()) {
             jda.shutdown();
         }

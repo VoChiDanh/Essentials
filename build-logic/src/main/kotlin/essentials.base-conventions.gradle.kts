@@ -20,14 +20,19 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:${junit5Version}")
     testImplementation("org.junit.platform:junit-platform-launcher:${junitPlatformVersion}")
     testImplementation("org.mockito:mockito-core:${mockitoVersion}")
-    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.76.1") {
-        exclude(module = "paper-api")
-        exclude(module = "spigot-api")
-    }
 
     constraints {
         implementation("org.yaml:snakeyaml:1.28") {
             because("Bukkit API ships old versions, Configurate requires modern versions")
+        }
+    }
+}
+
+if (project.layout.projectDirectory.dir("src/test/java").asFile.exists()) {
+    dependencies {
+        testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.76.1") {
+            exclude(module = "paper-api")
+            exclude(module = "spigot-api")
         }
     }
 }

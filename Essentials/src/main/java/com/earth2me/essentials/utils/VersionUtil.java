@@ -115,6 +115,7 @@ public final class VersionUtil {
 
     private static BukkitVersion serverVersion = null;
     private static SupportStatus supportStatus = null;
+    private static Boolean foliaServer = null;
     // Used to find the specific class that caused a given support status
     private static String supportStatusClass = null;
 
@@ -123,6 +124,18 @@ public final class VersionUtil {
 
     public static boolean isPaper() {
         return PaperLib.isPaper();
+    }
+
+    public static boolean isFoliaServer() {
+        if (foliaServer == null) {
+            try {
+                Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+                foliaServer = true;
+            } catch (final ClassNotFoundException ignored) {
+                foliaServer = false;
+            }
+        }
+        return foliaServer;
     }
 
     public static BukkitVersion getServerBukkitVersion() {
