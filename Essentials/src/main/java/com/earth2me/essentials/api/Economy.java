@@ -45,10 +45,8 @@ public class Economy {
     private static void createNPCFile(final String unsanitizedName) {
         final File folder = new File(ess.getDataFolder(), "userdata");
         final String name = ess.getSettings().isSafeUsermap() ? StringUtil.safeString(unsanitizedName) : unsanitizedName;
-        if (!folder.exists()) {
-            if (!folder.mkdirs()) {
-                throw new RuntimeException("Error while creating userdata directory!");
-            }
+        if (!folder.exists() && !folder.mkdirs() && !folder.exists()) {
+            throw new RuntimeException("Error while creating userdata directory!");
         }
         final UUID npcUUID = UUID.nameUUIDFromBytes(("NPC:" + name).getBytes(Charsets.UTF_8));
         final File npcFile = new File(folder, npcUUID + ".yml");

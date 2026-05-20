@@ -9,7 +9,6 @@ import net.essentialsx.api.v2.services.discord.MessageType;
 import net.essentialsx.discord.util.MessageUtil;
 import net.essentialsx.discordlink.DiscordLinkSettings;
 import net.essentialsx.discordlink.EssentialsDiscordLink;
-import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;

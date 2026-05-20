@@ -42,7 +42,7 @@ public abstract class UserData extends PlayerExtension implements IConf {
         super(base);
         this.ess = (Essentials) ess;
         final File folder = new File(ess.getDataFolder(), "userdata");
-        if (!folder.exists() && !folder.mkdirs()) {
+        if (!folder.exists() && !folder.mkdirs() && !folder.exists()) {
             throw new RuntimeException("Unable to create userdata folder!");
         }
 

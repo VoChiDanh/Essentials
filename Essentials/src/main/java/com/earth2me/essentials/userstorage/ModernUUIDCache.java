@@ -132,10 +132,10 @@ public class ModernUUIDCache {
         final boolean debug = ess.getSettings().isDebug();
 
         try {
-            if (!nameToUuidFile.exists()) {
-                if (!nameToUuidFile.createNewFile()) {
-                    throw new RuntimeException("Error while creating usermap.bin");
-                }
+            if (!nameToUuidFile.exists() && !nameToUuidFile.createNewFile() && !nameToUuidFile.exists()) {
+                throw new RuntimeException("Error while creating usermap.bin");
+            }
+            if (nameToUuidFile.length() == 0) {
                 return;
             }
 
@@ -160,10 +160,10 @@ public class ModernUUIDCache {
         }
 
         try {
-            if (!uuidCacheFile.exists()) {
-                if (!uuidCacheFile.createNewFile()) {
-                    throw new RuntimeException("Error while creating uuids.bin");
-                }
+            if (!uuidCacheFile.exists() && !uuidCacheFile.createNewFile() && !uuidCacheFile.exists()) {
+                throw new RuntimeException("Error while creating uuids.bin");
+            }
+            if (uuidCacheFile.length() == 0) {
                 return;
             }
 

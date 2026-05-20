@@ -1259,6 +1259,11 @@ public class Essentials extends JavaPlugin implements net.ess3.api.IEssentials {
     }
 
     @Override
+    public BukkitTask runTaskTimerForEntity(final Entity entity, final Runnable run, final long delay, final long period) {
+        return getSchedulingProvider().runTaskTimerForEntity(entity, run, delay, period);
+    }
+
+    @Override
     public void runTaskAtLocation(final Location location, final Runnable run) {
         getSchedulingProvider().runTaskAtLocation(location, run);
     }

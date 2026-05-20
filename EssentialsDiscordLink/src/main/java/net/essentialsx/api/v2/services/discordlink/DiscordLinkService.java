@@ -53,9 +53,9 @@ public interface DiscordLinkService {
      * @param uuid   The {@link UUID} of the target player.
      * @param member The {@link InteractionMember} to link to the target player.
      * @see net.essentialsx.api.v2.services.discord.DiscordService#getMemberById(String) to get an
-     * {@link InteractionMember} by their ID.
-     * @see #isLinked(UUID) to ensure the given {@link UUID} isn't already linked to an account.
-     * @see #isLinked(String) to ensure the given {@link InteractionMember} isn't already linked to an account.
+     * InteractionMember by their ID.
+     * @see #isLinked(UUID) to ensure the given UUID isn't already linked to an account.
+     * @see #isLinked(String) to ensure the given InteractionMember isn't already linked to an account.
      * @throws IllegalArgumentException if either of the {@link UUID} or {@link InteractionMember} are null.
      * @return true if the accounts were linked successfully, otherwise false.
      */

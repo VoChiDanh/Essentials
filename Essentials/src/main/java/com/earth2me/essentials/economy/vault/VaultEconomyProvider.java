@@ -294,10 +294,8 @@ public class VaultEconomyProvider implements Economy {
         // Citizens uses v2 UUIDs, yeah I don't know either!
         if (player.getUniqueId().version() == 3 || player.getUniqueId().version() == 2) {
             final File folder = new File(ess.getDataFolder(), "userdata");
-            if (!folder.exists()) {
-                if (!folder.mkdirs()) {
-                    throw new RuntimeException("Error while creating userdata directory!");
-                }
+            if (!folder.exists() && !folder.mkdirs() && !folder.exists()) {
+                throw new RuntimeException("Error while creating userdata directory!");
             }
             final File npcFile = new File(folder, player.getUniqueId() + ".yml");
             if (npcFile.exists()) {
