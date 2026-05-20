@@ -56,7 +56,7 @@ public class AsyncTimedTeleport implements Runnable {
         this.timer_respawn = respawn;
         this.timer_canMove = user.isAuthorized("essentials.teleport.timer.move");
 
-        timer_task = ess.runTaskTimerAsynchronously(this, 20, 20);
+        timer_task = ess.runTaskTimerForEntity(teleportUser.getBase(), this, 20, 20);
 
         if (future != null) {
             this.parentFuture = future;
@@ -73,8 +73,7 @@ public class AsyncTimedTeleport implements Runnable {
 
     @Override
     public void run() {
-
-        if (teleportOwner == null || !teleportOwner.getBase().isOnline() || teleportOwner.getBase().getLocation() == null) {
+        if (teleportOwner == null || !teleportOwner.getBase().isOnline()) {
             cancelTimer(false);
             return;
         }
@@ -98,52 +97,52 @@ public class AsyncTimedTeleport implements Runnable {
             return;
         }
 
-        class DelayedTeleportTask implements Runnable {
-            @Override
-            public void run() {
-
-                timer_health = teleportUser.getBase().getHealth(); // in case user healed, then later gets injured
-                final long now = System.currentTimeMillis();
-                if (now > timer_started + timer_delay) {
-                    try {
-                        teleport.cooldown(false);
-                    } catch (final Throwable ex) {
-                        teleportOwner.sendTl("cooldownWithMessage", ex.getMessage());
-                        if (teleportOwner != teleportUser) {
-                            teleportUser.sendTl("cooldownWithMessage", ex.getMessage());
-                        }
-                    }
-                    try {
-                        cancelTimer(false);
-                        teleportUser.sendTl("teleportationCommencing");
-
-                        if (timer_chargeFor != null) {
-                            timer_chargeFor.isAffordableFor(teleportOwner);
-                        }
-
-                        if (timer_respawn) {
-                            teleport.respawnNow(teleportUser, timer_cause, parentFuture);
-                        } else {
-                            teleport.nowAsync(teleportUser, timer_teleportTarget, timer_cause, parentFuture);
-                        }
-                        parentFuture.thenAccept(success -> {
-                            if (timer_chargeFor != null) {
-                                try {
-                                    timer_chargeFor.charge(teleportOwner);
-                                } catch (final ChargeException ex) {
-                                    ess.showError(teleportOwner.getSource(), ex, "\\ teleport");
-                                }
-                            }
-                        });
-
-                    } catch (final Exception ex) {
-                        ess.showError(teleportOwner.getSource(), ex, "\\ teleport");
+        final Runnable delayedTeleportTask = () -> {
+            timer_health = teleportUser.getBase().getHealth(); // in case user healed, then later gets injured
+            final long now = System.currentTimeMillis();
+            if (now > timer_started + timer_delay) {
+                try {
+                    teleport.cooldown(false);
+                } catch (final Throwable ex) {
+                    teleportOwner.sendTl("cooldownWithMessage", ex.getMessage());
+                    if (teleportOwner != teleportUser) {
+                        teleportUser.sendTl("cooldownWithMessage", ex.getMessage());
                     }
                 }
-            }
-        }
+                try {
+                    cancelTimer(false);
+                    teleportUser.sendTl("teleportationCommencing");
 
-        ess.runTaskForEntity(teleportOwner.getBase(), new DelayedTeleportTask());
+                    if (timer_chargeFor != null) {
+                        timer_chargeFor.isAffordableFor(teleportOwner);
+                    }
+
+                    if (timer_respawn) {
+                        teleport.respawnNow(teleportUser, timer_cause, parentFuture);
+                    } else {
+                        teleport.nowAsync(teleportUser, timer_teleportTarget, timer_cause, parentFuture);
+                    }
+                    parentFuture.thenAccept(success -> {
+                        if (timer_chargeFor != null) {
+                            try {
+                                timer_chargeFor.charge(teleportOwner);
+                            } catch (final ChargeException ex) {
+                                ess.showError(teleportOwner.getSource(), ex, "\\ teleport");
+                            }
+                        }
+                    });
+
+                } catch (final Exception ex) {
+                    ess.showError(teleportOwner.getSource(), ex, "\\ teleport");
+                }
+            }
+        };
+
+        if (teleportOwner.equals(teleportUser)) {
+            delayedTeleportTask.run();
+        } else {
+            ess.runTaskForEntity(teleportOwner.getBase(), delayedTeleportTask);
+        }
     }
 
     //If we need to cancelTimer a pending teleportPlayer call this method

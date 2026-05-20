@@ -147,7 +147,7 @@ public class AsyncTeleport implements IAsyncTeleport {
     }
 
     private void runOnMain(final Runnable runnable) throws ExecutionException, InterruptedException {
-        if (Bukkit.isPrimaryThread()) {
+        if (VersionUtil.isFoliaServer() ? Bukkit.isOwnedByCurrentRegion(teleportOwner.getBase()) : Bukkit.isPrimaryThread()) {
             runnable.run();
             return;
         }

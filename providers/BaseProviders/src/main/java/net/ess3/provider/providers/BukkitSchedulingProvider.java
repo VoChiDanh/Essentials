@@ -35,6 +35,11 @@ public class BukkitSchedulingProvider implements SchedulingProvider {
     }
 
     @Override
+    public BukkitTask runTaskTimerForEntity(final Entity entity, final Runnable run, final long delay, final long period) {
+        return runTaskTimerAsynchronously(() -> runSync(run), delay, period);
+    }
+
+    @Override
     public void runTaskAtLocation(final Location location, final Runnable run) {
         runSync(run);
     }

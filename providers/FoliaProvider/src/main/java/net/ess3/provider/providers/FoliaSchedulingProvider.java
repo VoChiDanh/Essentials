@@ -51,6 +51,14 @@ public class FoliaSchedulingProvider implements SchedulingProvider {
     }
 
     @Override
+    public BukkitTask runTaskTimerForEntity(final Entity entity, final Runnable run, final long delay, final long period) {
+        final int taskId = nextTaskId();
+        final FoliaBukkitTask task = registerTask(taskId, true);
+        task.setTask(entity.getScheduler().runAtFixedRate(plugin, scheduledTask -> run.run(), null, Math.max(1L, delay), Math.max(1L, period)));
+        return task;
+    }
+
+    @Override
     public void runTaskAtLocation(final Location location, final Runnable run) {
         plugin.getServer().getRegionScheduler().execute(plugin, location, run);
     }

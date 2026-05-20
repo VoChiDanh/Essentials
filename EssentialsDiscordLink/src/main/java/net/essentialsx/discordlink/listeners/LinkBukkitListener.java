@@ -160,11 +160,7 @@ public class LinkBukkitListener implements Listener {
         switch (ess.getSettings().getLinkPolicy()) {
             case KICK: {
                 final Runnable kickTask = () -> event.getUser().getBase().kickPlayer(ess.getEss().getAdventureFacet().miniToLegacy(event.getUser().playerTl("discordLinkLoginKick", "/link " + finalCode, ess.getApi().getInviteUrl())));
-                if (Bukkit.isPrimaryThread()) {
-                    kickTask.run();
-                } else {
-                    ess.getEss().scheduleSyncDelayedTask(kickTask);
-                }
+                ess.getEss().runTaskForEntity(event.getUser().getBase(), kickTask);
                 break;
             }
             case FREEZE: {
