@@ -231,6 +231,12 @@ public class AsyncTeleport implements IAsyncTeleport {
     }
 
     private void completeTeleport(final Player player, final Location loc, final TeleportCause cause, final CompletableFuture<Boolean> future) {
+        if (VersionUtil.isFoliaServer()) {
+            final CompletableFuture<Boolean> foliaFuture = player.teleportAsync(loc, cause);
+            foliaFuture.thenAccept(future::complete);
+            foliaFuture.exceptionally(future::completeExceptionally);
+            return;
+        }
         final CompletableFuture<Boolean> teleportFuture = PaperLib.teleportAsync(player, loc, cause);
         teleportFuture.thenAccept(future::complete);
         teleportFuture.exceptionally(future::completeExceptionally);
