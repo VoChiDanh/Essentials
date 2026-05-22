@@ -86,14 +86,17 @@ public class Commandfireball extends EssentialsCommand {
         }
 
         final Vector direction = user.getBase().getEyeLocation().getDirection().multiply(speed);
-        final Projectile projectile = user.getWorld().spawn(user.getBase().getEyeLocation().add(direction.getX(), direction.getY(), direction.getZ()), types.get(type));
-        projectile.setShooter(user.getBase());
-        projectile.setVelocity(direction);
-        projectile.setMetadata(FIREBALL_META_KEY, new FixedMetadataValue(ess, true));
+        final org.bukkit.Location spawnLocation = user.getBase().getEyeLocation().add(direction.getX(), direction.getY(), direction.getZ());
+        ess.runTaskAtLocation(spawnLocation, () -> {
+            final Projectile projectile = user.getWorld().spawn(spawnLocation, types.get(type));
+            projectile.setShooter(user.getBase());
+            projectile.setVelocity(direction);
+            projectile.setMetadata(FIREBALL_META_KEY, new FixedMetadataValue(ess, true));
 
-        if (ride) {
-            projectile.addPassenger(user.getBase());
-        }
+            if (ride) {
+                projectile.addPassenger(user.getBase());
+            }
+        });
     }
 
     @Override

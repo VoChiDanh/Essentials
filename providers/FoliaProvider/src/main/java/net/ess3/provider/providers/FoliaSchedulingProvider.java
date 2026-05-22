@@ -51,6 +51,14 @@ public class FoliaSchedulingProvider implements SchedulingProvider {
     }
 
     @Override
+    public BukkitTask runTaskLaterForEntity(final Entity entity, final Runnable run, final long delay) {
+        final int taskId = nextTaskId();
+        final FoliaBukkitTask task = registerTask(taskId, true);
+        task.setTask(entity.getScheduler().runDelayed(plugin, scheduledTask -> runOnce(taskId, run), null, Math.max(1L, delay)));
+        return task;
+    }
+
+    @Override
     public BukkitTask runTaskTimerForEntity(final Entity entity, final Runnable run, final long delay, final long period) {
         final int taskId = nextTaskId();
         final FoliaBukkitTask task = registerTask(taskId, true);
@@ -61,6 +69,14 @@ public class FoliaSchedulingProvider implements SchedulingProvider {
     @Override
     public void runTaskAtLocation(final Location location, final Runnable run) {
         plugin.getServer().getRegionScheduler().execute(plugin, location, run);
+    }
+
+    @Override
+    public BukkitTask runTaskLaterAtLocation(final Location location, final Runnable run, final long delay) {
+        final int taskId = nextTaskId();
+        final FoliaBukkitTask task = registerTask(taskId, true);
+        task.setTask(plugin.getServer().getRegionScheduler().runDelayed(plugin, location, scheduledTask -> runOnce(taskId, run), Math.max(1L, delay)));
+        return task;
     }
 
     @Override

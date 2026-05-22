@@ -20,14 +20,21 @@ public class Commandbeezooka extends EssentialsCommand {
             return;
         }
 
-        final Entity bee = Mob.BEE.spawn(user.getWorld(), server, user.getBase().getEyeLocation());
-        bee.setVelocity(user.getBase().getEyeLocation().getDirection().multiply(2));
+        final Location spawnLocation = user.getBase().getEyeLocation();
+        ess.runTaskAtLocation(spawnLocation, () -> {
+            try {
+                final Entity bee = Mob.BEE.spawn(user.getWorld(), server, spawnLocation);
+                bee.setVelocity(spawnLocation.getDirection().multiply(2));
 
-        ess.scheduleSyncDelayedTask(() -> ess.runTaskForEntity(bee, () -> {
-            final Location loc = bee.getLocation();
-            bee.remove();
-            loc.getWorld().createExplosion(loc, 0F);
-        }), 20);
+                ess.runTaskLaterForEntity(bee, () -> {
+                    final Location loc = bee.getLocation();
+                    bee.remove();
+                    loc.getWorld().createExplosion(loc, 0F);
+                }, 20);
+            } catch (final Mob.MobException e) {
+                user.sendTl("unableToSpawnMob");
+            }
+        });
     }
 
 }

@@ -35,6 +35,11 @@ public class BukkitSchedulingProvider implements SchedulingProvider {
     }
 
     @Override
+    public BukkitTask runTaskLaterForEntity(final Entity entity, final Runnable run, final long delay) {
+        return plugin.getServer().getScheduler().runTaskLater(plugin, run, delay);
+    }
+
+    @Override
     public BukkitTask runTaskTimerForEntity(final Entity entity, final Runnable run, final long delay, final long period) {
         return runTaskTimerAsynchronously(() -> runSync(run), delay, period);
     }
@@ -42,6 +47,11 @@ public class BukkitSchedulingProvider implements SchedulingProvider {
     @Override
     public void runTaskAtLocation(final Location location, final Runnable run) {
         runSync(run);
+    }
+
+    @Override
+    public BukkitTask runTaskLaterAtLocation(final Location location, final Runnable run, final long delay) {
+        return plugin.getServer().getScheduler().runTaskLater(plugin, run, delay);
     }
 
     @Override

@@ -14,9 +14,13 @@ public interface SchedulingProvider extends Provider {
 
     void runTaskForEntity(Entity entity, Runnable run);
 
+    BukkitTask runTaskLaterForEntity(Entity entity, Runnable run, long delay);
+
     BukkitTask runTaskTimerForEntity(Entity entity, Runnable run, long delay, long period);
 
     void runTaskAtLocation(Location location, Runnable run);
+
+    BukkitTask runTaskLaterAtLocation(Location location, Runnable run, long delay);
 
     void runTaskAtChunk(World world, int chunkX, int chunkZ, Runnable run);
 

@@ -80,18 +80,22 @@ public class Commandfirework extends EssentialsCommand {
                     direction = true;
                 }
             }
-            for (int i = 0; i < amount; i++) {
-                final Firework firework = (Firework) user.getWorld().spawnEntity(user.getLocation(), MobCompat.FIREWORK_ROCKET);
-                final FireworkMeta fmeta = (FireworkMeta) stack.getItemMeta();
-                if (direction) {
-                    final Vector vector = user.getBase().getEyeLocation().getDirection().multiply(0.070);
-                    if (fmeta.getPower() > 1) {
-                        fmeta.setPower(1);
+            final int finalAmount = amount;
+            final boolean finalDirection = direction;
+            final Vector vector = finalDirection ? user.getBase().getEyeLocation().getDirection().multiply(0.070) : null;
+            ess.runTaskAtLocation(user.getLocation(), () -> {
+                for (int i = 0; i < finalAmount; i++) {
+                    final Firework firework = (Firework) user.getWorld().spawnEntity(user.getLocation(), MobCompat.FIREWORK_ROCKET);
+                    final FireworkMeta fmeta = (FireworkMeta) stack.getItemMeta();
+                    if (finalDirection) {
+                        if (fmeta.getPower() > 1) {
+                            fmeta.setPower(1);
+                        }
+                        firework.setVelocity(vector);
                     }
-                    firework.setVelocity(vector);
+                    firework.setFireworkMeta(fmeta);
                 }
-                firework.setFireworkMeta(fmeta);
-            }
+            });
         } else {
             final MetaItemStack mStack = new MetaItemStack(stack);
             for (final String arg : args) {
