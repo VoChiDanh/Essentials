@@ -1,7 +1,9 @@
 name: Release Folia 26.1.2
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - 2.x
 
 permissions:
   contents: write
