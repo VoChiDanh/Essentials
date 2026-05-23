@@ -1,13 +1,14 @@
 name: Release Folia 26.1.2
 
 on:
-  push:
-    branches:
-      - 2.x
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-folia-26.1.2
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -27,7 +28,7 @@ jobs:
           java-version: 25
 
       - name: Build
-        run: ./gradlew build
+        run: ./gradlew clean build
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v7
@@ -36,6 +37,19 @@ jobs:
           path: jars/*.jar
           if-no-files-found: error
 
+      - name: Remove Existing Release Jars
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view Folia_26.1.2 >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          gh release view Folia_26.1.2 --json assets --jq '.assets[] | select(.name | endswith(".jar")) | .name' \
+            | while IFS= read -r asset; do
+                gh release delete-asset Folia_26.1.2 "$asset" -y
+              done
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -43,3 +57,4 @@ jobs:
           name: Folia 26.1.2
           files: jars/*.jar
           fail_on_unmatched_files: true
+          overwrite_files: true
