@@ -305,14 +305,7 @@ public class AsyncTeleport implements IAsyncTeleport {
                 future.complete(false);
                 return;
             }
-            nowAsync(teleportee, target, cause, future);
-            if (cashCharge != null) {
-                cashCharge.charge(teleportOwner, future);
-                if (future.isCompletedExceptionally()) {
-                    return;
-                }
-            }
-            future.complete(true);
+            completeAfterTeleport(teleportee, target, cashCharge, cause, future);
             return;
         }
 
@@ -357,14 +350,7 @@ public class AsyncTeleport implements IAsyncTeleport {
                 return;
             }
 
-            nowAsync(teleportee, target, cause, future);
-            if (teleporter != null && cashCharge != null) {
-                cashCharge.charge(teleporter, future);
-                if (future.isCompletedExceptionally()) {
-                    return;
-                }
-            }
-            future.complete(true);
+            completeAfterTeleport(teleportee, target, teleporter, cashCharge, cause, future);
             return;
         }
 
@@ -397,11 +383,9 @@ public class AsyncTeleport implements IAsyncTeleport {
             if (cooldown(false, future)) {
                 return;
             }
-            respawnNow(teleportOwner, cause, future);
-            if (chargeFor != null) {
-                chargeFor.charge(teleportOwner, future);
-            }
-            future.complete(true);
+            final CompletableFuture<Boolean> teleportFuture = new CompletableFuture<>();
+            respawnNow(teleportOwner, cause, teleportFuture);
+            completeAfterTeleport(teleportOwner, chargeFor, future, teleportFuture);
             return;
         }
 
@@ -426,6 +410,34 @@ public class AsyncTeleport implements IAsyncTeleport {
         }).exceptionally(th -> {
             future.completeExceptionally(th);
             return null;
+        });
+    }
+
+    private void completeAfterTeleport(final IUser teleportee, final ITarget target, final Trade chargeFor, final TeleportCause cause, final CompletableFuture<Boolean> future) {
+        completeAfterTeleport(teleportee, target, teleportOwner, chargeFor, cause, future);
+    }
+
+    private void completeAfterTeleport(final IUser teleportee, final ITarget target, final IUser chargedUser, final Trade chargeFor, final TeleportCause cause, final CompletableFuture<Boolean> future) {
+        final CompletableFuture<Boolean> teleportFuture = new CompletableFuture<>();
+        nowAsync(teleportee, target, cause, teleportFuture);
+        completeAfterTeleport(chargedUser, chargeFor, future, teleportFuture);
+    }
+
+    private void completeAfterTeleport(final IUser chargedUser, final Trade chargeFor, final CompletableFuture<Boolean> future, final CompletableFuture<Boolean> teleportFuture) {
+        teleportFuture.whenComplete((success, throwable) -> {
+            if (throwable != null) {
+                future.completeExceptionally(throwable);
+                return;
+            }
+
+            if (success && chargedUser != null && chargeFor != null) {
+                chargeFor.charge(chargedUser, future);
+                if (future.isCompletedExceptionally()) {
+                    return;
+                }
+            }
+
+            future.complete(success);
         });
     }
 

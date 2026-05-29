@@ -892,7 +892,7 @@ public class User extends UserData implements Comparable<User>, IMessageRecipien
                 }
             } else {
                 // If `afk-timeout-commands` in config.yml is populated, execute the command(s) instead of kicking the player.
-                ess.scheduleSyncDelayedTask(() -> {
+                ess.runTaskForEntity(base, () -> {
                     for (final String command : ess.getSettings().getAfkTimeoutCommands()) {
                         if (command == null || command.isEmpty()) {
                             continue;

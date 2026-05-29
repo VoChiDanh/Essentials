@@ -45,14 +45,14 @@ public class SignTime extends EssentialsSign {
         if ("§2Day".equalsIgnoreCase(timeString)) {
             final long newTime = time + 24000;
             charge.charge(player);
-            ess.scheduleSyncDelayedTask(() -> player.getWorld().setTime(newTime));
+            ess.runTaskAtLocation(sign.getBlock().getLocation(), () -> player.getWorld().setTime(newTime));
             Trade.log("Sign", "TimeDay", "Interact", username, null, username, charge, sign.getBlock().getLocation(), player.getMoney(), ess);
             return true;
         }
         if ("§2Night".equalsIgnoreCase(timeString)) {
             final long newTime = time + 37700;
             charge.charge(player);
-            ess.scheduleSyncDelayedTask(() -> player.getWorld().setTime(newTime));
+            ess.runTaskAtLocation(sign.getBlock().getLocation(), () -> player.getWorld().setTime(newTime));
             Trade.log("Sign", "TimeNight", "Interact", username, null, username, charge, sign.getBlock().getLocation(), player.getMoney(), ess);
             return true;
         }

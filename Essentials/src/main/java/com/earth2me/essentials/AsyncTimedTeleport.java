@@ -123,7 +123,7 @@ public class AsyncTimedTeleport implements Runnable {
                         teleport.nowAsync(teleportUser, timer_teleportTarget, timer_cause, parentFuture);
                     }
                     parentFuture.thenAccept(success -> {
-                        if (timer_chargeFor != null) {
+                        if (success && timer_chargeFor != null) {
                             try {
                                 timer_chargeFor.charge(teleportOwner);
                             } catch (final ChargeException ex) {

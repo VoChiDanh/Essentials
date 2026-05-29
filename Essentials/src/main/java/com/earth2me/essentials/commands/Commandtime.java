@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Commandtime extends EssentialsCommand {
     private final List<String> subCommands = Arrays.asList("add", "set");
@@ -85,8 +86,9 @@ public class Commandtime extends EssentialsCommand {
 
         final StringJoiner joiner = new StringJoiner(", ");
         final boolean addTime = add;
-        ess.scheduleSyncDelayedTask(() -> {
-            for (final World world : worlds) {
+        final AtomicInteger pendingWorlds = new AtomicInteger(worlds.size());
+        for (final World world : worlds) {
+            ess.runTaskAtLocation(world.getSpawnLocation(), () -> {
                 // Capture intended visible time for players with relative ptime before world time changes
                 final Map<Player, Long> ptimePlayers = new HashMap<>();
                 for (final Player player : world.getPlayers()) {
@@ -107,11 +109,17 @@ public class Commandtime extends EssentialsCommand {
                     entry.getKey().setPlayerTime(entry.getValue() - newWorldTime, true);
                 }
 
-                joiner.add(world.getName());
-            }
+                synchronized (joiner) {
+                    joiner.add(world.getName());
+                }
 
-            sender.sendTl(addTime ? "timeWorldAdd" : "timeWorldSet", DescParseTickFormat.formatTicks(timeTick), joiner.toString());
-        });
+                if (pendingWorlds.decrementAndGet() == 0) {
+                    synchronized (joiner) {
+                        sender.sendTl(addTime ? "timeWorldAdd" : "timeWorldSet", DescParseTickFormat.formatTicks(timeTick), joiner.toString());
+                    }
+                }
+            });
+        }
     }
 
     private void getWorldsTime(final CommandSource sender, final Collection<World> worlds) {
