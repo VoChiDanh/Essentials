@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v6
